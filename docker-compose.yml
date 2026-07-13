@@ -1,12 +1,41 @@
 services:
   argus:
     build: .
+    depends_on:
+      ai:
+        condition: service_healthy
     ports:
       - "8787:8787"
     environment:
       NODE_ENV: production
       PORT: 8787
       ARGUS_LIVE_INTELLIGENCE: "false"
+      ARGUS_AI_SERVICE_URL: http://ai:8000
+      ARGUS_AI_SERVICE_TOKEN: compose-internal-only
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,noexec,nosuid
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+  ai:
+    build: ./services/ai
+    environment:
+      ARGUS_INTERNAL_TOKEN: compose-internal-only
+      ARGUS_AI_PROVIDER: ${ARGUS_AI_PROVIDER:-disabled}
+      ARGUS_AI_MODEL: ${ARGUS_AI_MODEL:-gpt-5.6}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2)"
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
     read_only: true
     tmpfs:
       - /tmp:size=16m,noexec,nosuid

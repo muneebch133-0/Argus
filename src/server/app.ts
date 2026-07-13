@@ -4,13 +4,21 @@ import { cors } from "hono/cors";
 import { secureHeaders } from "hono/secure-headers";
 import { analyzeSystem } from "../engine/analyze.js";
 import { enrichCves, intelligenceSources } from "../engine/intelligence.js";
-import { analysisRequestSchema, cveRequestSchema } from "../shared/schemas.js";
+import { deterministicInterviewReview } from "../interview/review.js";
+import {
+  analysisRequestSchema,
+  cveRequestSchema,
+  interviewReviewRequestSchema,
+  interviewReviewSchema,
+} from "../shared/schemas.js";
 
 export interface AppConfig {
   liveIntelligence: boolean;
   nvdApiKey?: string;
   allowedOrigins: string[];
   requestTimeoutMs: number;
+  aiServiceUrl?: string;
+  aiServiceToken?: string;
 }
 
 const defaultConfig: AppConfig = {
@@ -58,16 +66,72 @@ export function createApp(config: AppConfig = defaultConfig): Hono {
   app.use("/api/*", bodyLimit({ maxSize: 1_000_000 }));
 
   app.get("/health", (context) =>
-    context.json({ status: "ok", service: "argus", version: "0.1.0" }),
+    context.json({ status: "ok", service: "argus", version: "0.2.0" }),
   );
   app.get("/api/meta", (context) =>
     context.json({
       name: "Argus",
-      version: "0.1.0",
+      version: "0.2.0",
       liveIntelligence: config.liveIntelligence,
+      aiInterviewer: Boolean(config.aiServiceUrl),
       sources: intelligenceSources,
     }),
   );
+
+  app.post("/api/interview/review", async (context) => {
+    let payload: unknown;
+    try {
+      payload = await context.req.json();
+    } catch {
+      return context.json({ error: "Request body must be valid JSON" }, 400);
+    }
+    const parsed = interviewReviewRequestSchema.safeParse(payload);
+    if (!parsed.success) {
+      return context.json(
+        {
+          error: "Interview profile is invalid",
+          issues: parsed.error.issues.map((issue) => ({
+            path: issue.path.join("."),
+            message: issue.message,
+          })),
+        },
+        400,
+      );
+    }
+    const fallback = deterministicInterviewReview(parsed.data.profile);
+    if (!config.aiServiceUrl) return context.json(fallback);
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), config.requestTimeoutMs);
+    try {
+      const response = await fetch(
+        `${config.aiServiceUrl.replace(/\/$/, "")}/v1/interview/review`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(config.aiServiceToken ? { "X-Argus-Internal-Token": config.aiServiceToken } : {}),
+          },
+          body: JSON.stringify(parsed.data),
+          signal: controller.signal,
+        },
+      );
+      if (!response.ok) throw new Error(`AI service returned HTTP ${response.status}`);
+      const review = interviewReviewSchema.safeParse(await response.json());
+      if (!review.success) throw new Error("AI service returned an invalid structured response");
+      return context.json(review.data);
+    } catch (error: unknown) {
+      return context.json({
+        ...fallback,
+        warnings: [
+          ...fallback.warnings,
+          `AI review was unavailable; deterministic questions were returned (${errorDetails(error)}).`,
+        ],
+      });
+    } finally {
+      clearTimeout(timeout);
+    }
+  });
 
   app.post("/api/analyze", async (context) => {
     let payload: unknown;
@@ -87,6 +151,18 @@ export function createApp(config: AppConfig = defaultConfig): Hono {
           })),
         },
         400,
+      );
+    }
+    const unreviewedCount =
+      parsed.data.model.nodes.filter((node) => node.reviewStatus === "needs-review").length +
+      parsed.data.model.flows.filter((flow) => flow.reviewStatus === "needs-review").length;
+    if (unreviewedCount > 0) {
+      return context.json(
+        {
+          error: "Architecture evidence requires human confirmation",
+          detail: `${unreviewedCount} generated components or flows remain marked needs-review.`,
+        },
+        409,
       );
     }
     return context.json(analyzeSystem(parsed.data.model));

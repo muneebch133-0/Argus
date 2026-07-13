@@ -88,7 +88,14 @@ export function ArchitectureNode({ data }: NodeProps<ArchitectureGraphNode>): Re
         <span className="architecture-node__kind">{node.kind.replaceAll("-", " ")}</span>
       </div>
       <strong>{node.name}</strong>
-      <span className="architecture-node__zone">{node.trustZone}</span>
+      <div className="architecture-node__meta">
+        <span className="architecture-node__zone">{node.trustZone}</span>
+        {node.reviewStatus === "needs-review" ? (
+          <span className="architecture-node__review" title="Generated entity requires review">
+            review
+          </span>
+        ) : null}
+      </div>
       <Handle type="source" position={Position.Right} />
     </div>
   );

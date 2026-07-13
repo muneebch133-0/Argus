@@ -18,9 +18,12 @@ Argus turns an architecture diagram into reviewable threat scenarios, framework 
 - Maps relevant findings to MITRE ATT&CK, MITRE ATLAS, CSA MAESTRO, OWASP LLM Top 10, OWASP Agentic Top 10 and NIST adversarial machine learning guidance.
 - Produces stable finding IDs, transparent risk scores, attack paths, assumptions and confidence levels.
 - Recommends controls with implementation steps and verification tests.
-- Imports and exports portable JSON models and exports reports as JSON or Markdown.
+- Discovers draft architectures from OpenAPI, Docker Compose, Kubernetes, Terraform plans and MCP configurations.
+- Guides a reviewer through a structured architecture interview for standard, AI, RAG and agentic systems.
+- Preserves source locators on generated entities and blocks analysis until a human confirms the draft evidence.
+- Imports and exports portable Argus JSON models and exports reports as JSON or Markdown.
 - Optionally enriches explicitly supplied CVE IDs with NVD, CISA KEV and FIRST EPSS data.
-- Keeps model data local by default; no LLM or external intelligence service is contacted during normal analysis.
+- Keeps normal analysis deterministic; no LLM or external intelligence service is contacted unless separately enabled.
 
 ## Supported threat knowledge
 
@@ -52,6 +55,8 @@ Open `http://localhost:5173`. The API runs on `http://localhost:8787` and the de
 
 Try the built-in **Agentic customer support** or **Payment API** models, select a node or flow to describe its security properties, and choose **Run threat analysis**.
 
+Use **Interview** to create a model from guided questions, or use the upload button to import an architecture file. Generated components and flows are visibly marked **Review** and cannot be analysed until their evidence has been confirmed.
+
 ## Production build
 
 ```bash
@@ -70,17 +75,55 @@ docker compose up --build
 
 The supplied image uses a non-root runtime user. The Compose profile drops Linux capabilities, prevents privilege escalation and runs with a read-only filesystem.
 
+Compose also starts the internal Python interview service in deterministic mode. No model provider is contacted by default.
+
+## Architecture discovery and evidence review
+
+Argus parses discovery files in the browser. Source files are not uploaded to the Node API or optional AI service.
+
+| Input | Draft evidence extracted |
+| --- | --- |
+| OpenAPI 3 / Swagger 2 JSON or YAML | API, operations, authentication declarations and external caller flow |
+| Docker Compose YAML | Services, images, networks, ports, dependencies and declared security settings |
+| Kubernetes YAML | Workloads, Services, Ingress routes, images, namespaces and pod security settings |
+| Terraform plan JSON | Planned resource types, locations and public-access indicators |
+| MCP JSON configuration | MCP servers, command or remote transport, and environment-variable **names only** |
+| Argus JSON | A validated portable model, including existing evidence and review state |
+
+Importers describe declared configuration, not runtime truth. All inferred nodes and flows retain a source name, locator, observation and confidence. A reviewer can confirm them individually in the inspector or confirm the complete draft after review. The API independently enforces this gate with HTTP `409` if unreviewed generated evidence remains.
+
+See [Architecture importers](docs/importers.md) for supported shapes, assumptions and security limits.
+
+## Optional guarded AI interviewer
+
+The guided interview works without an LLM. Its deterministic reviewer asks up to three questions about missing identity, data, agent-permission, approval and audit evidence.
+
+An optional Python service can use [OpenAI structured output](https://developers.openai.com/api/docs/guides/structured-outputs) to improve those questions:
+
+```bash
+cp .env.example .env
+# Set ARGUS_AI_PROVIDER=openai and OPENAI_API_KEY in .env
+docker compose up --build
+```
+
+Only the bounded interview profile is sent to the configured provider. Imported files, the generated graph and analysis findings are not included. The service disables provider storage, exposes no model tools, validates the result with a strict Pydantic schema and falls back to deterministic questions on any provider or validation failure. AI output can ask questions; it cannot confirm evidence or add findings.
+
+See [AI interviewer](docs/ai-interviewer.md) for configuration, privacy and trust boundaries.
+
 ## Analysis flow
 
 ```mermaid
 flowchart TD
     A["Architecture model"] --> B["Schema validation"]
-    B --> C["Deterministic rule engine"]
-    C --> D["Risk and evidence scoring"]
-    D --> E["Framework mappings"]
-    D --> F["Control selection"]
-    E --> G["Reviewable report"]
-    F --> G
+    B --> C{"All generated evidence confirmed?"}
+    C -->|"No"| H["Human evidence review"]
+    H --> B
+    C -->|"Yes"| D["Deterministic rule engine"]
+    D --> E["Risk and evidence scoring"]
+    E --> F["Framework mappings"]
+    E --> G["Control selection"]
+    F --> I["Reviewable report"]
+    G --> I
 ```
 
 Risk is intentionally explainable. The engine starts from likelihood and impact in each rule, then adjusts for architecture evidence such as exposure, data classification and business criticality. See [Architecture](docs/architecture.md) for the data flow and [Rule authoring](docs/rule-authoring.md) for the extension contract.
@@ -136,6 +179,7 @@ Other endpoints:
 | --- | --- |
 | `GET /health` | Runtime health and version |
 | `GET /api/meta` | Engine metadata and intelligence sources |
+| `POST /api/interview/review` | Bounded architecture-profile review with deterministic fallback |
 | `POST /api/intelligence/cves` | Opt-in CVE enrichment for 1–25 validated CVE IDs |
 
 ## Optional live vulnerability intelligence
@@ -155,10 +199,12 @@ The adapter collects NVD description/CVSS/CWE data, CISA KEV status and FIRST EP
 
 - Architecture models are stored in browser local storage unless the user exports them.
 - Normal threat analysis is deterministic and makes no outbound request.
-- Imported JSON is schema-validated and size-limited at the API boundary.
+- Architecture files are parsed locally, limited to 2 MB and treated as untrusted input.
+- Generated architecture evidence requires explicit human confirmation before analysis.
 - The server applies a restrictive Content Security Policy and other defensive headers.
 - Cross-origin API access is allowlisted with `ALLOWED_ORIGINS`.
 - Live intelligence uses fixed upstream URLs, bounded CVE input and request timeouts.
+- The optional AI service receives only validated interview fields, has no tools and fails closed to deterministic review.
 - No secrets belong in architecture descriptions, exported reports or Git history.
 
 Review the project's own [threat model](docs/threat-model.md) and [security policy](SECURITY.md) before internet-facing deployment.
@@ -168,16 +214,19 @@ Review the project's own [threat model](docs/threat-model.md) and [security poli
 ```text
 src/client/       React architecture modeller and report UI
 src/engine/       Deterministic rules, scoring, controls and intelligence adapters
+src/importers/    Browser-local OpenAPI, Compose, Kubernetes, Terraform and MCP adapters
+src/interview/    Deterministic guided interview and draft builder
 src/server/       Hono API, validation and production static server
 src/shared/       Versioned schemas and shared types
+services/ai/      Optional isolated Python/FastAPI interview assistant
 examples/         Valid standard and agentic reference models
-tests/            Engine, schema, API and intelligence tests
+tests/            Engine, schema, API, discovery, interview and intelligence tests
 docs/             Architecture, sources, self-threat-model and contributor guides
 ```
 
 ## Current scope and roadmap
 
-Version 0.1 is an end-to-end, single-user MVP. It does not yet include multi-user authentication, server-side projects, diagram-as-code ingestion, automated SBOM matching or an AI writing assistant. The rule engine already models AI systems; an eventual LLM assistant should explain verified results, never invent framework IDs or vulnerability evidence.
+Version 0.2 is an end-to-end, single-user release with evidence-gated architecture discovery and a guarded interview assistant. It does not include multi-user authentication, server-side projects, live cloud-account discovery or automated SBOM applicability matching. AI assistance is deliberately limited to eliciting architecture facts; the deterministic engine remains the sole source of findings, framework IDs, risk scores and controls.
 
 See the [roadmap](docs/roadmap.md) for planned milestones.
 

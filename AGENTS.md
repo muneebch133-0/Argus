@@ -5,4 +5,7 @@
 - Keep evidence type, confidence, applicability, and source URL explicit.
 - Do not label a product as vulnerable from a name match alone. A CVE becomes confirmed only after version/applicability verification.
 - Treat imported architecture data as untrusted input. Do not fetch user-provided URLs from the server.
-- Run `npm run check` before proposing a change.
+- Architecture importers must retain source locators and mark inferred entities `needs-review`.
+- Keep the AI service limited to interview questions. It must have no tools and must degrade to deterministic output.
+- Run `npm run check` before proposing a TypeScript change.
+- For Python changes, run `ruff check app tests` and `pytest` from `services/ai`.

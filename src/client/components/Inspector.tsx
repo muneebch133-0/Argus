@@ -1,7 +1,12 @@
-import { Trash2 } from "lucide-react";
+import { AlertTriangle, CheckCircle2, FileCheck2, Trash2 } from "lucide-react";
 import { cloneElement, useId } from "react";
 import { NODE_KIND_LABELS, NODE_KINDS, SYSTEM_KINDS } from "../../shared/constants.js";
-import type { ArchitectureNode, DataFlow, SystemModel } from "../../shared/schemas.js";
+import type {
+  ArchitectureNode,
+  DataFlow,
+  SourceEvidence,
+  SystemModel,
+} from "../../shared/schemas.js";
 
 interface InspectorProps {
   model: SystemModel;
@@ -57,6 +62,60 @@ function Toggle({
   );
 }
 
+function EvidencePanel({
+  reviewStatus,
+  evidence,
+  onConfirm,
+}: {
+  reviewStatus: ArchitectureNode["reviewStatus"];
+  evidence: SourceEvidence[];
+  onConfirm: () => void;
+}): React.ReactNode {
+  return (
+    <section className={`evidence-panel evidence-panel--${reviewStatus}`}>
+      <header>
+        <div>
+          {reviewStatus === "confirmed" ? <FileCheck2 size={16} /> : <AlertTriangle size={16} />}
+          <span>
+            <strong>
+              {reviewStatus === "confirmed" ? "Evidence confirmed" : "Human review required"}
+            </strong>
+            <small>
+              {reviewStatus === "confirmed"
+                ? "A reviewer has accepted this entity as architecture evidence."
+                : "This entity was inferred and must be checked against the real system."}
+            </small>
+          </span>
+        </div>
+        {reviewStatus === "needs-review" ? (
+          <button className="button button--confirm" type="button" onClick={onConfirm}>
+            <CheckCircle2 size={14} /> Confirm
+          </button>
+        ) : null}
+      </header>
+      {evidence.length > 0 ? (
+        <div className="evidence-items">
+          {evidence.map((item) => (
+            <article key={`${item.source}-${item.sourceName}-${item.locator}-${item.observation}`}>
+              <div>
+                <span>{item.source.replaceAll("-", " ")}</span>
+                <small>{item.confidence} confidence</small>
+              </div>
+              <strong>{item.sourceName}</strong>
+              <code>{item.locator}</code>
+              <p>{item.observation}</p>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <p className="evidence-empty">
+          This manually created entity has no attached source record.
+        </p>
+      )}
+    </section>
+  );
+}
+
 function NodeInspector({
   node,
   onChange,
@@ -103,6 +162,11 @@ function NodeInspector({
         </button>
       </div>
       <div className="form-stack">
+        <EvidencePanel
+          reviewStatus={node.reviewStatus}
+          evidence={node.evidence}
+          onConfirm={() => onChange({ reviewStatus: "confirmed" })}
+        />
         <Field label="Name">
           <input value={node.name} onChange={(event) => onChange({ name: event.target.value })} />
         </Field>
@@ -330,6 +394,11 @@ function FlowInspector({
         </button>
       </div>
       <div className="form-stack">
+        <EvidencePanel
+          reviewStatus={flow.reviewStatus}
+          evidence={flow.evidence}
+          onConfirm={() => onChange({ reviewStatus: "confirmed" })}
+        />
         <Field label="Flow label">
           <input value={flow.label} onChange={(event) => onChange({ label: event.target.value })} />
         </Field>
@@ -377,6 +446,9 @@ function SystemInspector({
   model: SystemModel;
   onChange: (patch: Partial<SystemModel>) => void;
 }): React.ReactNode {
+  const reviewCount =
+    model.nodes.filter((node) => node.reviewStatus === "needs-review").length +
+    model.flows.filter((flow) => flow.reviewStatus === "needs-review").length;
   return (
     <div className="inspector-body">
       <div className="panel-heading panel-heading--bordered">
@@ -438,7 +510,32 @@ function SystemInspector({
             <strong>{new Set(model.nodes.map((node) => node.trustZone)).size}</strong>
             <span>Trust zones</span>
           </div>
+          <div>
+            <strong>{reviewCount}</strong>
+            <span>Need review</span>
+          </div>
         </div>
+        {reviewCount > 0 ? (
+          <div className="callout callout--review-gate">
+            <strong>Analysis is evidence-gated</strong>
+            <p>
+              Inspect generated components and flows before confirming. Use this only after
+              reviewing the imported draft against the real architecture.
+            </p>
+            <button
+              className="button button--confirm-all"
+              type="button"
+              onClick={() =>
+                onChange({
+                  nodes: model.nodes.map((node) => ({ ...node, reviewStatus: "confirmed" })),
+                  flows: model.flows.map((flow) => ({ ...flow, reviewStatus: "confirmed" })),
+                })
+              }
+            >
+              <CheckCircle2 size={15} /> Confirm reviewed draft
+            </button>
+          </div>
+        ) : null}
         <div className="callout">
           <strong>Evidence convention</strong>
           <p>

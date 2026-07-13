@@ -1,5 +1,12 @@
 import { z } from "zod";
-import { CONFIDENCE_LEVELS, NODE_KINDS, SEVERITIES, SYSTEM_KINDS } from "./constants.js";
+import {
+  CONFIDENCE_LEVELS,
+  EVIDENCE_SOURCE_KINDS,
+  NODE_KINDS,
+  REVIEW_STATUSES,
+  SEVERITIES,
+  SYSTEM_KINDS,
+} from "./constants.js";
 
 export const attributeValueSchema = z.union([
   z.string().max(500),
@@ -7,6 +14,14 @@ export const attributeValueSchema = z.union([
   z.boolean(),
   z.array(z.string().max(200)).max(100),
 ]);
+
+export const sourceEvidenceSchema = z.object({
+  source: z.enum(EVIDENCE_SOURCE_KINDS),
+  sourceName: z.string().min(1).max(160),
+  locator: z.string().min(1).max(500),
+  confidence: z.enum(CONFIDENCE_LEVELS),
+  observation: z.string().min(1).max(1000),
+});
 
 export const architectureNodeSchema = z.object({
   id: z
@@ -24,6 +39,8 @@ export const architectureNodeSchema = z.object({
     .default("internal"),
   position: z.object({ x: z.number().finite(), y: z.number().finite() }),
   attributes: z.record(z.string(), attributeValueSchema).default({}),
+  reviewStatus: z.enum(REVIEW_STATUSES).default("confirmed"),
+  evidence: z.array(sourceEvidenceSchema).max(20).default([]),
 });
 
 export const dataFlowSchema = z.object({
@@ -41,6 +58,8 @@ export const dataFlowSchema = z.object({
   carriesSensitiveData: z.boolean().default(false),
   untrustedContent: z.boolean().default(false),
   crossesTrustBoundary: z.boolean().default(false),
+  reviewStatus: z.enum(REVIEW_STATUSES).default("confirmed"),
+  evidence: z.array(sourceEvidenceSchema).max(20).default([]),
 });
 
 export const systemModelSchema = z
@@ -89,6 +108,50 @@ export const analysisRequestSchema = z.object({
     liveVulnerabilityEnrichment: false,
     includeInformational: false,
   }),
+});
+
+export const interviewProfileSchema = z.object({
+  name: z.string().min(1).max(120),
+  description: z.string().max(2000).default(""),
+  systemKind: z.enum(SYSTEM_KINDS).default("auto"),
+  businessCriticality: z.enum(["low", "medium", "high", "mission-critical"]).default("high"),
+  primaryUsers: z.string().max(500).default("Customers"),
+  internetExposed: z.boolean().default(true),
+  sensitiveData: z.boolean().default(false),
+  dataStores: z.string().max(1000).default(""),
+  externalSystems: z.string().max(1000).default(""),
+  usesAi: z.boolean().default(false),
+  usesRag: z.boolean().default(false),
+  usesAgents: z.boolean().default(false),
+  agentTools: z.string().max(1000).default(""),
+  highImpactActions: z.boolean().default(false),
+  authentication: z.boolean().default(true),
+  encryption: z.boolean().default(true),
+  auditLogging: z.boolean().default(false),
+  humanApproval: z.boolean().default(false),
+  additionalContext: z.string().max(2000).default(""),
+});
+
+export const interviewReviewRequestSchema = z.object({
+  profile: interviewProfileSchema,
+});
+
+export const interviewQuestionSchema = z.object({
+  id: z
+    .string()
+    .min(1)
+    .max(80)
+    .regex(/^[a-zA-Z0-9_-]+$/),
+  question: z.string().min(1).max(400),
+  whyItMatters: z.string().min(1).max(600),
+  category: z.enum(["scope", "identity", "data", "boundary", "ai", "operations"]),
+});
+
+export const interviewReviewSchema = z.object({
+  mode: z.enum(["deterministic", "ai"]),
+  summary: z.string().min(1).max(1200),
+  questions: z.array(interviewQuestionSchema).max(3),
+  warnings: z.array(z.string().max(500)).max(10),
 });
 
 export const cveRequestSchema = z.object({
@@ -181,6 +244,10 @@ export const analysisResultSchema = z.object({
 export type ArchitectureNode = z.infer<typeof architectureNodeSchema>;
 export type DataFlow = z.infer<typeof dataFlowSchema>;
 export type SystemModel = z.infer<typeof systemModelSchema>;
+export type SourceEvidence = z.infer<typeof sourceEvidenceSchema>;
+export type InterviewProfile = z.infer<typeof interviewProfileSchema>;
+export type InterviewQuestion = z.infer<typeof interviewQuestionSchema>;
+export type InterviewReview = z.infer<typeof interviewReviewSchema>;
 export type AnalysisOptions = z.infer<typeof analysisOptionsSchema>;
 export type AnalysisRequest = z.infer<typeof analysisRequestSchema>;
 export type FrameworkRef = z.infer<typeof frameworkRefSchema>;

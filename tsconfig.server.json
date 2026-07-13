@@ -10,5 +10,5 @@
     "sourceMap": true,
     "types": ["node"]
   },
-  "include": ["src/server", "src/shared", "src/engine"]
+  "include": ["src/server", "src/shared", "src/engine", "src/interview", "src/importers/utils.ts"]
 }
