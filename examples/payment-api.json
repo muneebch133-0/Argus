@@ -1,0 +1,114 @@
+{
+  "schemaVersion": "1.0",
+  "name": "Customer payment API",
+  "description": "Illustrative internet banking payment service used to demonstrate traditional STRIDE analysis.",
+  "systemKind": "standard",
+  "businessCriticality": "mission-critical",
+  "nodes": [
+    {
+      "id": "customer",
+      "name": "Customer",
+      "kind": "actor",
+      "description": "Authenticated retail banking customer.",
+      "trustZone": "internet",
+      "exposure": "internet",
+      "dataClassification": "public",
+      "position": { "x": 0, "y": 120 },
+      "attributes": {}
+    },
+    {
+      "id": "mobile-app",
+      "name": "Mobile application",
+      "kind": "application",
+      "description": "Customer mobile channel.",
+      "trustZone": "customer-device",
+      "exposure": "internet",
+      "dataClassification": "confidential",
+      "position": { "x": 230, "y": 120 },
+      "attributes": { "inputValidation": true, "rateLimited": true, "auditLogging": true }
+    },
+    {
+      "id": "api-gateway",
+      "name": "API gateway",
+      "kind": "api",
+      "description": "Authenticates and routes mobile API traffic.",
+      "trustZone": "edge",
+      "exposure": "internet",
+      "dataClassification": "confidential",
+      "position": { "x": 500, "y": 120 },
+      "attributes": { "inputValidation": true, "rateLimited": true, "auditLogging": true }
+    },
+    {
+      "id": "payment-service",
+      "name": "Payment service",
+      "kind": "service",
+      "description": "Creates and authorises customer payments.",
+      "trustZone": "application",
+      "exposure": "internal",
+      "dataClassification": "restricted",
+      "position": { "x": 760, "y": 120 },
+      "attributes": { "inputValidation": true, "auditLogging": false, "highImpact": true }
+    },
+    {
+      "id": "payment-db",
+      "name": "Payment database",
+      "kind": "data-store",
+      "description": "Stores payment instructions and status.",
+      "trustZone": "data",
+      "exposure": "internal",
+      "dataClassification": "restricted",
+      "position": { "x": 1020, "y": 120 },
+      "attributes": { "encryptedAtRest": false }
+    }
+  ],
+  "flows": [
+    {
+      "id": "customer-to-mobile",
+      "source": "customer",
+      "target": "mobile-app",
+      "label": "Payment request",
+      "protocol": "HTTPS",
+      "authenticated": true,
+      "encrypted": true,
+      "carriesSensitiveData": true,
+      "untrustedContent": true,
+      "crossesTrustBoundary": true
+    },
+    {
+      "id": "mobile-to-gateway",
+      "source": "mobile-app",
+      "target": "api-gateway",
+      "label": "Authenticated API call",
+      "protocol": "HTTPS",
+      "authenticated": true,
+      "encrypted": true,
+      "carriesSensitiveData": true,
+      "untrustedContent": true,
+      "crossesTrustBoundary": true
+    },
+    {
+      "id": "gateway-to-service",
+      "source": "api-gateway",
+      "target": "payment-service",
+      "label": "Payment command",
+      "protocol": "HTTP",
+      "authenticated": false,
+      "encrypted": false,
+      "carriesSensitiveData": true,
+      "untrustedContent": false,
+      "crossesTrustBoundary": true
+    },
+    {
+      "id": "service-to-db",
+      "source": "payment-service",
+      "target": "payment-db",
+      "label": "Payment record",
+      "protocol": "TLS",
+      "authenticated": true,
+      "encrypted": true,
+      "carriesSensitiveData": true,
+      "untrustedContent": false,
+      "crossesTrustBoundary": true
+    }
+  ]
+}

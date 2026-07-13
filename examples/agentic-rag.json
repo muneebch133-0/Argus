@@ -1,0 +1,358 @@
+{
+  "schemaVersion": "1.0",
+  "name": "Agentic customer support",
+  "description": "Illustrative support agent with RAG, persistent memory, MCP tools and a human approval checkpoint.",
+  "systemKind": "auto",
+  "businessCriticality": "mission-critical",
+  "nodes": [
+    {
+      "id": "customer",
+      "name": "Customer",
+      "kind": "actor",
+      "description": "External customer using the support channel.",
+      "trustZone": "internet",
+      "exposure": "internet",
+      "dataClassification": "public",
+      "position": { "x": 0, "y": 80 },
+      "attributes": {}
+    },
+    {
+      "id": "support-ui",
+      "name": "Support web app",
+      "kind": "application",
+      "description": "Authenticated customer-facing support interface.",
+      "trustZone": "edge",
+      "exposure": "internet",
+      "dataClassification": "confidential",
+      "position": { "x": 230, "y": 80 },
+      "attributes": {
+        "inputValidation": true,
+        "auditLogging": true,
+        "rateLimited": true
+      }
+    },
+    {
+      "id": "support-agent",
+      "name": "Support agent",
+      "kind": "agent",
+      "description": "Plans responses and invokes approved business tools.",
+      "trustZone": "ai-platform",
+      "exposure": "internal",
+      "dataClassification": "restricted",
+      "position": { "x": 500, "y": 80 },
+      "attributes": {
+        "auditLogging": true,
+        "instructionDataSeparation": false,
+        "promptInjectionTested": false,
+        "circuitBreaker": false
+      }
+    },
+    {
+      "id": "hosted-model",
+      "name": "Hosted foundation model",
+      "kind": "model-api",
+      "description": "Third-party model API used for planning and response generation.",
+      "trustZone": "model-provider",
+      "exposure": "partner",
+      "dataClassification": "confidential",
+      "position": { "x": 760, "y": 0 },
+      "attributes": {
+        "modelProvenanceVerified": true,
+        "rateLimited": true,
+        "extractionMonitoring": true,
+        "privacyEvaluated": false
+      }
+    },
+    {
+      "id": "public-docs",
+      "name": "External knowledge sources",
+      "kind": "external-system",
+      "description": "Partner and public documents admitted to the knowledge ingestion pipeline.",
+      "trustZone": "internet",
+      "exposure": "internet",
+      "dataClassification": "public",
+      "position": { "x": 0, "y": 340 },
+      "attributes": {}
+    },
+    {
+      "id": "rag-pipeline",
+      "name": "RAG ingestion and retrieval",
+      "kind": "rag-pipeline",
+      "description": "Chunks, embeds and retrieves support knowledge.",
+      "trustZone": "data-platform",
+      "exposure": "internal",
+      "dataClassification": "confidential",
+      "position": { "x": 260, "y": 340 },
+      "attributes": {
+        "provenanceVerified": false,
+        "auditLogging": true
+      }
+    },
+    {
+      "id": "vector-store",
+      "name": "Knowledge vector store",
+      "kind": "vector-store",
+      "description": "Stores embeddings for multiple business units.",
+      "trustZone": "data-platform",
+      "exposure": "internal",
+      "dataClassification": "restricted",
+      "position": { "x": 520, "y": 340 },
+      "attributes": {
+        "tenantIsolation": false,
+        "encryptedAtRest": true
+      }
+    },
+    {
+      "id": "agent-memory",
+      "name": "Persistent agent memory",
+      "kind": "memory",
+      "description": "Stores customer preferences and prior support context.",
+      "trustZone": "data-platform",
+      "exposure": "internal",
+      "dataClassification": "restricted",
+      "position": { "x": 760, "y": 250 },
+      "attributes": {
+        "tenantIsolation": true,
+        "encryptedAtRest": true,
+        "provenanceVerified": false
+      }
+    },
+    {
+      "id": "crm-mcp",
+      "name": "CRM MCP server",
+      "kind": "mcp-server",
+      "description": "Exposes customer profile and case-management tools.",
+      "trustZone": "integration",
+      "exposure": "internal",
+      "dataClassification": "restricted",
+      "position": { "x": 760, "y": 430 },
+      "attributes": {
+        "writesData": true,
+        "highImpact": true,
+        "modelOutputValidated": false,
+        "auditLogging": true
+      }
+    },
+    {
+      "id": "approval",
+      "name": "Refund approval",
+      "kind": "human-approval",
+      "description": "Shows exact refund parameters to an authorised employee.",
+      "trustZone": "operations",
+      "exposure": "internal",
+      "dataClassification": "confidential",
+      "position": { "x": 760, "y": 590 },
+      "attributes": { "auditLogging": true }
+    },
+    {
+      "id": "refund-tool",
+      "name": "Refund API",
+      "kind": "tool",
+      "description": "Creates financial refunds after approval.",
+      "trustZone": "payments",
+      "exposure": "internal",
+      "dataClassification": "restricted",
+      "position": { "x": 1020, "y": 590 },
+      "attributes": {
+        "writesData": true,
+        "highImpact": true,
+        "modelOutputValidated": true,
+        "auditLogging": true,
+        "inputValidation": true
+      }
+    },
+    {
+      "id": "ai-observability",
+      "name": "AI security telemetry",
+      "kind": "observability",
+      "description": "Correlates model, retrieval, agent and tool activity.",
+      "trustZone": "security",
+      "exposure": "internal",
+      "dataClassification": "confidential",
+      "position": { "x": 1020, "y": 260 },
+      "attributes": { "auditLogging": true, "encryptedAtRest": true }
+    }
+  ],
+  "flows": [
+    {
+      "id": "customer-to-ui",
+      "source": "customer",
+      "target": "support-ui",
+      "label": "Support request",
+      "protocol": "HTTPS",
+      "authenticated": true,
+      "encrypted": true,
+      "carriesSensitiveData": true,
+      "untrustedContent": true,
+      "crossesTrustBoundary": true
+    },
+    {
+      "id": "ui-to-agent",
+      "source": "support-ui",
+      "target": "support-agent",
+      "label": "Customer prompt",
+      "protocol": "HTTPS",
+      "authenticated": true,
+      "encrypted": true,
+      "carriesSensitiveData": true,
+      "untrustedContent": true,
+      "crossesTrustBoundary": true
+    },
+    {
+      "id": "agent-to-model",
+      "source": "support-agent",
+      "target": "hosted-model",
+      "label": "Prompt and context",
+      "protocol": "HTTPS",
+      "authenticated": true,
+      "encrypted": true,
+      "carriesSensitiveData": true,
+      "untrustedContent": true,
+      "crossesTrustBoundary": true
+    },
+    {
+      "id": "model-to-agent",
+      "source": "hosted-model",
+      "target": "support-agent",
+      "label": "Model response",
+      "protocol": "HTTPS",
+      "authenticated": true,
+      "encrypted": true,
+      "carriesSensitiveData": false,
+      "untrustedContent": true,
+      "crossesTrustBoundary": true
+    },
+    {
+      "id": "docs-to-rag",
+      "source": "public-docs",
+      "target": "rag-pipeline",
+      "label": "Knowledge ingestion",
+      "protocol": "HTTPS",
+      "authenticated": false,
+      "encrypted": true,
+      "carriesSensitiveData": false,
+      "untrustedContent": true,
+      "crossesTrustBoundary": true
+    },
+    {
+      "id": "rag-to-vector",
+      "source": "rag-pipeline",
+      "target": "vector-store",
+      "label": "Chunks and embeddings",
+      "protocol": "TLS",
+      "authenticated": true,
+      "encrypted": true,
+      "carriesSensitiveData": true,
+      "untrustedContent": true,
+      "crossesTrustBoundary": false
+    },
+    {
+      "id": "vector-to-agent",
+      "source": "vector-store",
+      "target": "support-agent",
+      "label": "Retrieved context",
+      "protocol": "TLS",
+      "authenticated": true,
+      "encrypted": true,
+      "carriesSensitiveData": true,
+      "untrustedContent": true,
+      "crossesTrustBoundary": true
+    },
+    {
+      "id": "agent-to-memory",
+      "source": "support-agent",
+      "target": "agent-memory",
+      "label": "Memory write",
+      "protocol": "TLS",
+      "authenticated": true,
+      "encrypted": true,
+      "carriesSensitiveData": true,
+      "untrustedContent": true,
+      "crossesTrustBoundary": true
+    },
+    {
+      "id": "memory-to-agent",
+      "source": "agent-memory",
+      "target": "support-agent",
+      "label": "Memory retrieval",
+      "protocol": "TLS",
+      "authenticated": true,
+      "encrypted": true,
+      "carriesSensitiveData": true,
+      "untrustedContent": true,
+      "crossesTrustBoundary": true
+    },
+    {
+      "id": "agent-to-crm",
+      "source": "support-agent",
+      "target": "crm-mcp",
+      "label": "CRM tool call",
+      "protocol": "MCP over HTTPS",
+      "authenticated": true,
+      "encrypted": true,
+      "carriesSensitiveData": true,
+      "untrustedContent": false,
+      "crossesTrustBoundary": true
+    },
+    {
+      "id": "agent-to-approval",
+      "source": "support-agent",
+      "target": "approval",
+      "label": "Proposed refund",
+      "protocol": "HTTPS",
+      "authenticated": true,
+      "encrypted": true,
+      "carriesSensitiveData": true,
+      "untrustedContent": false,
+      "crossesTrustBoundary": true
+    },
+    {
+      "id": "approval-to-refund",
+      "source": "approval",
+      "target": "refund-tool",
+      "label": "Approved refund",
+      "protocol": "HTTPS",
+      "authenticated": true,
+      "encrypted": true,
+      "carriesSensitiveData": true,
+      "untrustedContent": false,
+      "crossesTrustBoundary": true
+    },
+    {
+      "id": "agent-to-observability",
+      "source": "support-agent",
+      "target": "ai-observability",
+      "label": "Execution trace",
+      "protocol": "OTLP/TLS",
+      "authenticated": true,
+      "encrypted": true,
+      "carriesSensitiveData": false,
+      "untrustedContent": false,
+      "crossesTrustBoundary": true
+    },
+    {
+      "id": "agent-to-ui",
+      "source": "support-agent",
+      "target": "support-ui",
+      "label": "Support response",
+      "protocol": "HTTPS",
+      "authenticated": true,
+      "encrypted": true,
+      "carriesSensitiveData": true,
+      "untrustedContent": false,
+      "crossesTrustBoundary": true
+    },
+    {
+      "id": "ui-to-customer",
+      "source": "support-ui",
+      "target": "customer",
+      "label": "Rendered response",
+      "protocol": "HTTPS",
+      "authenticated": true,
+      "encrypted": true,
+      "carriesSensitiveData": true,
+      "untrustedContent": false,
+      "crossesTrustBoundary": true
+    }
+  ]
+}
