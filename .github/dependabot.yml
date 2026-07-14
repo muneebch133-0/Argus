@@ -16,8 +16,18 @@ updates:
     schedule:
       interval: weekly
       day: monday
+  - package-ecosystem: pip
+    directory: /services/ai
+    schedule:
+      interval: weekly
+      day: monday
   - package-ecosystem: docker
     directory: /
+    schedule:
+      interval: weekly
+      day: monday
+  - package-ecosystem: docker
+    directory: /services/ai
     schedule:
       interval: weekly
       day: monday

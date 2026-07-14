@@ -12,7 +12,16 @@ The roadmap favours trustworthy evidence and review workflows over adding a larg
 - Optional NVD, CISA KEV and FIRST EPSS enrichment.
 - Tests, hardened container, CI, CodeQL and source documentation.
 
-## 0.2 — Evidence and rule operations
+## 0.2 — Evidence-gated discovery and interviews
+
+- Browser-local OpenAPI, Docker Compose, Kubernetes, Terraform plan and MCP importers.
+- Source provenance and review state on every generated component and flow.
+- Human confirmation gate enforced in both the client and analysis API.
+- Guided architecture interview for standard, AI, RAG and agentic systems.
+- Optional isolated Python assistant with structured output and deterministic fallback.
+- AI-service tests, container hardening, Python CI and CodeQL coverage.
+
+## 0.3 — Evidence and rule operations
 
 - Versioned external rule packs with signed releases.
 - Framework/source update checks and mapping-diff review.
@@ -20,26 +29,26 @@ The roadmap favours trustworthy evidence and review workflows over adding a larg
 - SARIF and CycloneDX-compatible output where semantics fit.
 - Expanded positive and negative rule fixtures.
 
-## 0.3 — Architecture ingestion
+## 0.4 — Live inventory and applicability
 
-- OpenAPI, Terraform plan, Kubernetes and cloud inventory adapters.
-- Diagram-as-code import with an explicit evidence-confidence model.
+- Read-only cloud inventory adapters with narrow, documented permissions.
+- Diagram-as-code round trips and source-diff review.
 - SBOM/PURL inventory and applicability-aware CVE matching.
-- Data-flow and trust-boundary suggestions that always require confirmation.
+- Runtime evidence reconciliation without silently overwriting reviewer decisions.
 
-## 0.4 — Collaboration
+## 0.5 — Collaboration
 
 - Authenticated projects, organisations and role-based access.
 - Tenant isolation, encryption, audit records and retention controls.
 - Review gates, comments and remediation integrations.
 - A new threat model and external security review before release.
 
-## 0.5 — Guarded AI assistance
+## 0.6 — Guarded AI explanation and evaluation
 
-- Optional model-assisted architecture interviews and scenario explanations.
-- Structured outputs validated against deterministic schemas.
+- Optional explanations grounded only in the exact deterministic result and approved sources.
 - Retrieval only from versioned, approved framework content.
-- Provenance and clear separation between model suggestions and verified evidence.
-- Evaluation suite for hallucinated IDs, prompt injection, data leakage and unsafe actions.
+- Citations and clear separation between model wording and verified engine evidence.
+- Expanded evaluation suite for hallucinated IDs, prompt injection, data leakage and unsafe actions.
+- No autonomous remediation or deployment mutation.
 
 Roadmap items are proposals, not commitments. Open an issue with a concrete use case and security constraints before starting a large feature.

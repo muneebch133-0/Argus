@@ -3,7 +3,7 @@ import type { AnalysisResult, SystemModel } from "../shared/schemas.js";
 import { selectControls } from "./controls.js";
 import { runThreatRules } from "./rules.js";
 
-export const ENGINE_VERSION = "0.1.0";
+export const ENGINE_VERSION = "0.2.0";
 
 export function analyzeSystem(model: SystemModel): AnalysisResult {
   const { mode, threats } = runThreatRules(model);

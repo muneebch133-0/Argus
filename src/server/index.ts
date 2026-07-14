@@ -13,6 +13,10 @@ const app = createApp({
   ...(process.env.NVD_API_KEY ? { nvdApiKey: process.env.NVD_API_KEY } : {}),
   allowedOrigins,
   requestTimeoutMs: Number(process.env.REQUEST_TIMEOUT_MS ?? 7000),
+  ...(process.env.ARGUS_AI_SERVICE_URL ? { aiServiceUrl: process.env.ARGUS_AI_SERVICE_URL } : {}),
+  ...(process.env.ARGUS_AI_SERVICE_TOKEN
+    ? { aiServiceToken: process.env.ARGUS_AI_SERVICE_TOKEN }
+    : {}),
 });
 
 app.use("/*", serveStatic({ root: "./dist/client" }));

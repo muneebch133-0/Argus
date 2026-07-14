@@ -1,6 +1,9 @@
 import {
   type AnalysisResult,
   analysisResultSchema,
+  type InterviewProfile,
+  type InterviewReview,
+  interviewReviewSchema,
   type SystemModel,
 } from "../../shared/schemas.js";
 
@@ -34,4 +37,16 @@ export async function analyzeArchitecture(model: SystemModel): Promise<AnalysisR
     );
   }
   return analysisResultSchema.parse(await response.json());
+}
+
+export async function reviewInterview(profile: InterviewProfile): Promise<InterviewReview> {
+  const response = await fetch("/api/interview/review", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ profile }),
+  });
+  if (!response.ok) {
+    throw new Error(`Interview review failed with HTTP ${response.status}`);
+  }
+  return interviewReviewSchema.parse(await response.json());
 }

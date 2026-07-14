@@ -41,7 +41,7 @@ Interpretation rules:
 
 ## AI incident and vulnerability records
 
-Argus links to the [AI Vulnerability Database](https://docs.avidml.org/database/introduction) as an evidence source but does not automatically ingest records in v0.1. AI incident records may describe harms, failures or weaknesses that do not fit the conventional product/version/CVE model. Future ingestion must preserve the source's taxonomy and distinguish observed incidents from a vulnerability confirmed in the user's architecture.
+Argus links to the [AI Vulnerability Database](https://docs.avidml.org/database/introduction) as an evidence source but does not automatically ingest records in v0.2. AI incident records may describe harms, failures or weaknesses that do not fit the conventional product/version/CVE model. Future ingestion must preserve the source's taxonomy and distinguish observed incidents from a vulnerability confirmed in the user's architecture.
 
 ## Updating sources
 

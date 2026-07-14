@@ -26,8 +26,13 @@ The repository provides secure defaults for a local single-user deployment, not 
 - terminate TLS at a maintained proxy or platform;
 - set an explicit `ALLOWED_ORIGINS` value;
 - keep live intelligence disabled unless outbound data handling is approved;
+- keep `ARGUS_AI_PROVIDER=disabled` unless interview-profile processing by the provider is approved;
+- keep the Python interview service on a private network with a high-entropy internal token;
+- store `OPENAI_API_KEY` only in a secret manager and restrict AI-service egress;
 - store `NVD_API_KEY` only in a secret manager;
 - add request-level rate limiting at the edge; and
 - review [`docs/threat-model.md`](docs/threat-model.md).
 
 Never place production credentials, customer data or confidential architecture details in public issues or sample models.
+
+Imported architecture files are processed in the browser, but they can remain in browser memory and may contain sensitive infrastructure detail. Review and classify files before use. Do not put secrets in architecture descriptions or interview answers.

@@ -50,6 +50,17 @@ export const AGENTIC_NODE_KINDS = new Set<(typeof NODE_KINDS)[number]>([
 export const SEVERITIES = ["critical", "high", "medium", "low", "informational"] as const;
 export const CONFIDENCE_LEVELS = ["high", "medium", "low"] as const;
 export const SYSTEM_KINDS = ["auto", "standard", "ai", "agentic"] as const;
+export const REVIEW_STATUSES = ["confirmed", "needs-review"] as const;
+export const EVIDENCE_SOURCE_KINDS = [
+  "manual",
+  "interview",
+  "openapi",
+  "docker-compose",
+  "kubernetes",
+  "terraform-plan",
+  "mcp-config",
+  "ai-suggestion",
+] as const;
 
 export const NODE_KIND_LABELS: Record<(typeof NODE_KINDS)[number], string> = {
   actor: "User / actor",

@@ -8,5 +8,13 @@
     "noEmit": true,
     "types": ["vite/client", "vitest/globals"]
   },
-  "include": ["src/client", "src/shared", "src/engine", "tests", "vite.config.ts"]
+  "include": [
+    "src/client",
+    "src/shared",
+    "src/engine",
+    "src/importers",
+    "src/interview",
+    "tests",
+    "vite.config.ts"
+  ]
 }

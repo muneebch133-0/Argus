@@ -15,6 +15,15 @@ Before opening a pull request:
 npm run check
 ```
 
+If the Python interviewer changes:
+
+```bash
+cd services/ai
+python -m pip install -r requirements-dev.txt
+ruff check app tests
+pytest
+```
+
 ## Contribution principles
 
 - Keep the analysis engine deterministic and reviewable.
@@ -23,6 +32,8 @@ npm run check
 - Never label a component vulnerable from a product-name or CVE-string match alone.
 - Describe controls as testable outcomes, with implementation and verification guidance.
 - Avoid collecting model data or making outbound requests without explicit user action.
+- Preserve source provenance and the `needs-review` gate for importer and interview output.
+- Keep optional AI output schema-constrained and outside the deterministic analysis engine.
 
 ## Adding a threat rule
 
